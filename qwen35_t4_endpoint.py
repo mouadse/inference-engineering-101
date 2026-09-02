@@ -54,6 +54,8 @@ def serve() -> None:
             "0.8",
             "--mamba-ssm-dtype",
             "float16",
+            "--num-continuous-decode-steps",
+            "2",
             "--cuda-graph-backend-prefill",
             "disabled",
         ]
