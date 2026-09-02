@@ -1,0 +1,10 @@
+# Local agent instructions, skills, and tool state
+.agents/
+.claude/
+.codex/
+AGENTS.md
+skills-lock.json
+
+# Python-generated files
+__pycache__/
+*.py[cod]
