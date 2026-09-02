@@ -56,6 +56,8 @@ def serve() -> None:
             "float16",
             "--num-continuous-decode-steps",
             "4",
+            "--scheduler-recv-interval",
+            "2",
             "--cuda-graph-backend-prefill",
             "disabled",
         ]
