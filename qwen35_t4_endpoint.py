@@ -58,6 +58,8 @@ def serve() -> None:
             "4",
             "--scheduler-recv-interval",
             "4",
+            "--sampling-backend",
+            "pytorch",
             "--cuda-graph-backend-prefill",
             "disabled",
         ]
