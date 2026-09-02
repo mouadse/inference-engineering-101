@@ -118,6 +118,7 @@ run_request() {
     local error_message
 
     curl_metrics="$(curl -sS \
+        --location \
         --max-time 600 \
         -o "$response_file" \
         -w '%{http_code} %{time_total}' \
