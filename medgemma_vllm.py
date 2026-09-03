@@ -68,6 +68,7 @@ class Server:
             "--port", str(VLLM_PORT),
             "--tensor-parallel-size", "1",
             "--dtype", "auto",  # bf16 on A10G
+            "--quantization", "fp8",
             "--gpu-memory-utilization", "0.90",
             "--max-model-len", "8192",  # bounds KV-cache pre-allocation
             "--max-num-seqs", "32",
