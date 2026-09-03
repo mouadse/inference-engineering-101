@@ -60,6 +60,9 @@ def serve() -> None:
             "4",
             "--sampling-backend",
             "pytorch",
+            "--enable-torch-compile",
+            "--torch-compile-max-bs",
+            "1",
             "--cuda-graph-backend-prefill",
             "disabled",
         ]
