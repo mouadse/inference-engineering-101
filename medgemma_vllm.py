@@ -47,6 +47,7 @@ app = modal.App("medgemma-1-5-4b-vllm")
     gpu="L4",  # 24 GB: ~9 GB weights (bf16) + vision + KV cache + CUDA graphs
     unauthenticated=True,  # public URL so plain curl / bench_toks.py work
     scaledown_window=15 * 60,
+    min_containers=1,  # avoid multi-minute zero-to-one GPU cold starts
     startup_timeout=20 * 60,  # cold download + torch.compile + graph capture
     volumes={
         "/root/.cache/huggingface": hf_cache_vol,
