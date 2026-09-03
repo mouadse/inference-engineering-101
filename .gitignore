@@ -4,7 +4,7 @@
 .codex/
 AGENTS.md
 skills-lock.json
-
+.env
 # Python-generated files
 __pycache__/
 *.py[cod]
