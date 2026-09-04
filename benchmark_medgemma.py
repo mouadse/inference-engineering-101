@@ -14,8 +14,8 @@ from pathlib import Path
 
 import aiohttp
 
-MODEL_ID = "google/medgemma-1.5-4b-it"
-DEFAULT_URL = "https://mouadse--medgemma-1-5-4b-vllm-server.us-east.modal.direct"
+MODEL_ID = "google/medgemma-27b-it"
+DEFAULT_URL = "https://mouadse--medgemma-27b-vllm-server.us-east.modal.direct"
 
 
 def percentile(values: list[float], quantile: float) -> float:

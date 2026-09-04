@@ -102,7 +102,7 @@ def summarize(name, samples):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--url", required=True, help="Endpoint base URL (no trailing path)")
-    p.add_argument("--model", default="google/medgemma-1.5-4b-it")
+    p.add_argument("--model", default="google/medgemma-27b-it")
     p.add_argument("--mode", choices=["text", "vision"], default="vision")
     p.add_argument("--runs", type=int, default=5)
     p.add_argument("--warmups", type=int, default=2)

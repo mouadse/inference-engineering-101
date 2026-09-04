@@ -3,8 +3,34 @@
 .claude/
 .codex/
 AGENTS.md
+CLAUDE.md
 skills-lock.json
+# Secrets: tracked examples (*.example) stay committable via the negation
 .env
+.env.*
+!.env.example
+*.local
 # Python-generated files
 __pycache__/
 *.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+# Next.js frontend
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+# Local benchmark outputs (per-run measurements, not baselines)
+benchmark-results.json
+results.tsv
+run.log
+quality-reference.json
+# OS / editor cruft
+.DS_Store
+*.swp

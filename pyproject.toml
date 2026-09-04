@@ -1,7 +1,7 @@
 [project]
 name = "medgemma-modal-vllm"
 version = "0.1.0"
-description = "Deploy google/medgemma-1.5-4b-it to Modal with vLLM (OpenAI-compatible)"
+description = "Deploy google/medgemma-27b-it to Modal with vLLM (OpenAI-compatible)"
 requires-python = ">=3.12"
 dependencies = [
     "modal>=1.5.5",

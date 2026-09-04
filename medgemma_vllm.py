@@ -1,21 +1,25 @@
-"""OpenAI-compatible vLLM server for google/medgemma-1.5-4b-it on Modal (L4).
+"""OpenAI-compatible vLLM server for google/medgemma-27b-it on Modal (A100).
 
 Usage (all via uv):
     uv sync                                  # local env with the Modal CLI
-    modal secret create hf-secret HF_TOKEN=hf_...   # once; needs MedGemma license accepted
+    set -a && . ./.env && set +a && uv run modal secret create --force hf-secret HF_TOKEN="$HF_TOKEN"
     uv run modal deploy medgemma_vllm.py      # deploy
     uv run modal run medgemma_vllm.py         # smoke-test the deployed server
     uv run bench_toks.py --url <deployed-url> # benchmark toks/sec
 
-Model page / license: https://huggingface.co/google/medgemma-1.5-4b-it
+Model page / license: https://huggingface.co/google/medgemma-27b-it
 """
 
 import json
+import os
+import socket
+import time
 
 import modal
 
-MODEL_ID = "google/medgemma-1.5-4b-it"
+MODEL_ID = "google/medgemma-27b-it"
 VLLM_PORT = 8000
+STARTUP_TIMEOUT_S = 20 * 60
 FAST_BOOT = False  # True = --enforce-eager (fast cold start, slower decode)
 
 vllm_image = (
@@ -29,7 +33,6 @@ vllm_image = (
             "HF_HOME": "/root/.cache/huggingface",
             "HF_HUB_ENABLE_HF_TRANSFER": "1",  # fast weight downloads
             "HF_XET_HIGH_PERFORMANCE": "1",
-            "VLLM_CACHE_DIR": "/root/.cache/vllm",
             "TORCHINDUCTOR_CACHE_DIR": "/root/.cache/vllm/torchinductor",
             "VLLM_LOG_STATS_INTERVAL": "10",
         }
@@ -39,16 +42,38 @@ vllm_image = (
 hf_cache_vol = modal.Volume.from_name("huggingface-cache", create_if_missing=True)
 vllm_cache_vol = modal.Volume.from_name("vllm-cache", create_if_missing=True)
 
-app = modal.App("medgemma-1-5-4b-vllm")
+app = modal.App("medgemma-27b-vllm")
+
+
+def _wait_for_server(process, port, timeout_s, poll_interval_s=1.0):
+    deadline = time.monotonic() + timeout_s
+    while True:
+        returncode = process.poll()
+        if returncode is not None:
+            raise RuntimeError(
+                f"vLLM exited during startup with status {returncode}; review its logs above"
+            )
+
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=1):
+                return
+        except OSError:
+            pass
+
+        if time.monotonic() >= deadline:
+            if process.poll() is None:
+                process.terminate()
+            raise TimeoutError(f"vLLM did not listen on port {port} within {timeout_s}s")
+        time.sleep(poll_interval_s)
 
 
 @app.server(
     image=vllm_image,
-    gpu="L4",  # 24 GB: ~9 GB weights (bf16) + vision + KV cache + CUDA graphs
+    gpu="A100",  # 40 GB minimum; FP8 weights leave room for vision and KV cache
     unauthenticated=True,  # public URL so plain curl / bench_toks.py work
     scaledown_window=15 * 60,
-    min_containers=1,  # avoid multi-minute zero-to-one GPU cold starts
-    startup_timeout=20 * 60,  # cold download + torch.compile + graph capture
+    min_containers=1,  # avoid multi-minute zero-to-one A100 cold starts
+    startup_timeout=STARTUP_TIMEOUT_S,  # cold download + compile + graph capture
     volumes={
         "/root/.cache/huggingface": hf_cache_vol,
         "/root/.cache/vllm": vllm_cache_vol,
@@ -62,13 +87,29 @@ class Server:
     def start(self):
         import subprocess
 
+        from huggingface_hub import hf_hub_download
+        from huggingface_hub.errors import HfHubHTTPError
+
+        token = os.environ.get("HF_TOKEN")
+        if not token:
+            raise RuntimeError("Modal secret 'hf-secret' does not contain HF_TOKEN")
+        try:
+            hf_hub_download(MODEL_ID, "config.json", token=token)
+        except HfHubHTTPError as exc:
+            if exc.response is not None and exc.response.status_code in (401, 403):
+                raise RuntimeError(
+                    "HF_TOKEN in Modal secret 'hf-secret' cannot access "
+                    f"{MODEL_ID}; refresh hf-secret from the authorized token "
+                    "before redeploying"
+                ) from exc
+            raise
         cmd = [
             "vllm", "serve", MODEL_ID,
             "--served-model-name", MODEL_ID,
             "--host", "0.0.0.0",
             "--port", str(VLLM_PORT),
             "--tensor-parallel-size", "1",
-            "--dtype", "auto",  # bf16 on A10G
+            "--dtype", "auto",  # bf16 activations on A100
             "--quantization", "fp8",
             "--gpu-memory-utilization", "0.90",
             "--max-model-len", "8192",  # bounds KV-cache pre-allocation
@@ -84,6 +125,7 @@ class Server:
 
         print(*cmd)
         self.process = subprocess.Popen(cmd)
+        _wait_for_server(self.process, VLLM_PORT, STARTUP_TIMEOUT_S)
 
     @modal.exit()
     def stop(self):
